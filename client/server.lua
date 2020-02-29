@@ -59,3 +59,37 @@ give up without hanging
 to sidestep the issue)
 
 --]]
+
+local socket = require "socket"
+
+local function init( log )
+    local s = {}
+
+    function s:login( address, port )
+        local tcp = socket.tcp()
+        tcp:settimeout( 5 ) -- in seconds
+        local success, err = tcp:connect( address, port )
+        if not success then
+            --TODO need workflow that goes back to user
+            error( "Encountered error trying to connect to server: " .. err )
+        end
+        local bytes_sent, err = tcp:send( "i am client" ) 
+        if not bytes_sent then
+            --TODO need workflow that goes back to user
+            error( "Encountered error trying to send to server: " .. err )
+        end
+        local data, err = tcp:receive()
+        if not data then
+            --TODO need workflow that goes back to user
+            error( "Encountered error trying to receive from server: " .. err )
+        end
+
+        tcp:close()
+    end
+
+    return s
+end
+
+
+return { init = init
+       }
