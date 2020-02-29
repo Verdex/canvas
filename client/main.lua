@@ -15,16 +15,13 @@ function love.load()
     logger = log_mod.debug_logger()
     event = event_mod.init( logger )
     keyboard = keyboard_mod.init() 
-
 end
 
 -- this function is called continuously
 -- dt is the delta time (in seconds) of the last
 -- time that the function was called
 function love.update(dt)
-    for _, c in pairs( world:get_continuous() ) do
-        c.fn( dt ) 
-    end
+
 end
 
 -- this is the only function that the graphics functions
