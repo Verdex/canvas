@@ -1,7 +1,6 @@
 
 local keyboard_mod = require 'keyboard'
 local log_mod = require 'log'
-local world_mod = require 'world'
 local event_mod = require 'event'
 
 local socket = require 'socket'
@@ -11,20 +10,12 @@ local socket = require 'socket'
 function love.load()
     s = socket.tcp()
     s:connect( "localhost", 3000 )
+    tot, err = s:send( "zap" )
 
     logger = log_mod.debug_logger()
-    world = world_mod.init()
     event = event_mod.init( logger )
     keyboard = keyboard_mod.init() 
 
-    hero_id = world:create_mob( { x = 10 ; y = 10 ; move = 10 ;
-                                  symbol = '@' } )
-    
-    world:create_mob( { x = 50 ; y = 25 ; move = 1 ; symbol = 'Z' } )
-
-    local movement_mode = keyboard_mod.init_movement_mode( event, world, hero_id )
-
-    keyboard:set_mode( 'm', movement_mode )
 end
 
 -- this function is called continuously
@@ -40,11 +31,10 @@ end
 -- will work in
 function love.draw()
 
-    local tot, err = s:send( "zap" )
-
     if not tot then
-        love.graphics.print( err, 40, 40 )
+        love.graphics.print( "err: " .. err, 40, 40 )
     else
+        love.graphics.print( "blah", 20, 40 )
         love.graphics.print( tot, 40, 40 )
     end
  
