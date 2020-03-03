@@ -7,8 +7,8 @@ const END_TX : u8 = 10;
 
 fn read_packet( mut stream : TcpStream ) -> std::io::Result<()> {
 
-    let mut buffer = [0; 512];
-    let mut tot : Vec<[u8; 512]> = vec![];
+    let mut buffer = [0; 16];
+    let mut tot : Vec<[u8; 16]> = vec![];
 
     loop {
         let count = stream.read(&mut buffer[..])?;
@@ -23,10 +23,12 @@ fn read_packet( mut stream : TcpStream ) -> std::io::Result<()> {
             break
         }
 
-        buffer = [0; 512];
+        buffer = [0; 16];
     }
 
-    // TODO make sure we keep reading in case the total length is longer than 512
+    // TODO I don't really want to pass around a vec<[]>
+    // See if i can create something to make the vec<[]> opaque
+
     Ok(())
 }
 
@@ -42,6 +44,7 @@ fn handle_stream( mut stream : TcpStream ) -> std::io::Result<()> {
         Err(e) => panic!("Bad String : {}", e),
         Ok( v ) => println!("got : {}", v),
     }*/
+    let _x = read_packet(stream);
 
     Ok(())
 }
