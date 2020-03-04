@@ -8,8 +8,8 @@ const END_TX : u8 = 10;
 
 fn read_packet<R : Read>( mut stream : R ) -> std::io::Result<Vec<u8>> {
 
-    let mut buffer = [0; 512];
-    let mut tot : Vec<[u8; 512]> = vec![];
+    let mut buffer = [0; 128];
+    let mut tot : Vec<[u8; 128]> = vec![];
 
     loop {
         let count = stream.read(&mut buffer[..])?;
@@ -24,7 +24,7 @@ fn read_packet<R : Read>( mut stream : R ) -> std::io::Result<Vec<u8>> {
             break
         }
 
-        buffer = [0; 512];
+        buffer = [0; 128];
     }
 
     let packet : Vec<u8> = tot.into_iter()
@@ -41,6 +41,7 @@ fn handle_stream( mut stream : TcpStream ) -> std::io::Result<()> {
     // TODO this needs to happen in a thread
     // TODO need a timeout so we can kill the thread if it turns out nothing is coming
     
+    // TODO what timeout value to use?
     stream.set_read_timeout(Some(Duration::from_secs(2)))?;
     let packet = read_packet(stream);
     match packet {
@@ -65,6 +66,7 @@ fn main() -> std::io::Result<()> {
     println!("blarg {}", bz[0]);
 
     // TODO this needs to happen in a thread
+    // TODO need to set the connect timeout
     let listener = TcpListener::bind("127.0.0.1:3000")?;
 
     for stream in listener.incoming() {
