@@ -1,20 +1,21 @@
 
-use std::io::Read;
 use std::net::{TcpListener, TcpStream};
+use std::time::Duration;
+use std::io::{Read, Error, ErrorKind};
 
 const END_TX : u8 = 10;
 
 
-fn read_packet( mut stream : TcpStream ) -> std::io::Result<()> {
+fn read_packet<R : Read>( mut stream : R ) -> std::io::Result<Vec<u8>> {
 
-    let mut buffer = [0; 16];
-    let mut tot : Vec<[u8; 16]> = vec![];
+    let mut buffer = [0; 512];
+    let mut tot : Vec<[u8; 512]> = vec![];
 
     loop {
         let count = stream.read(&mut buffer[..])?;
 
         if count == 0 {
-            // return error
+            return Err(Error::new(ErrorKind::Other, "Read zero bytes"));
         }
          
         tot.push( buffer );
@@ -23,28 +24,35 @@ fn read_packet( mut stream : TcpStream ) -> std::io::Result<()> {
             break
         }
 
-        buffer = [0; 16];
+        buffer = [0; 512];
     }
 
-    // TODO I don't really want to pass around a vec<[]>
-    // See if i can create something to make the vec<[]> opaque
+    let packet : Vec<u8> = tot.into_iter()
+                              .map( | b | b.iter()
+                                           .fold( vec![], | mut p, sp | { p.push( *sp ); p } ) )
+                              .flatten()
+                              .collect();
 
-    Ok(())
+
+    Ok(packet)
 }
 
 fn handle_stream( mut stream : TcpStream ) -> std::io::Result<()> {
     // TODO this needs to happen in a thread
     // TODO need a timeout so we can kill the thread if it turns out nothing is coming
+    
+    stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+    let packet = read_packet(stream);
+    match packet {
+        Ok(x) => println!( "ok " ),
+        Err(e) => println!( "err : {}", e ),
+    }
+    
+    
 
-
-    /*let x = String::from_utf8( buffer[..count].to_vec() ); 
+    //let x = String::from_utf8( buffer[..count].to_vec() ); 
     // TODO if we end up parsing the string here, then do we need a String or can we just use a &str?
     
-    match x {
-        Err(e) => panic!("Bad String : {}", e),
-        Ok( v ) => println!("got : {}", v),
-    }*/
-    let _x = read_packet(stream);
 
     Ok(())
 }
