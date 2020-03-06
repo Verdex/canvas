@@ -29,14 +29,32 @@ impl<'a> Parser<'a> {
             _ => (),
         }
     }
-}
 
+    fn symbol(&mut self) -> Result<String, String> {
+        fn f<T>( v : Option<T> ) -> Result<T, String> {
+            match v {
+                Some(v) => Ok(v),
+                None => Err("Encountered end of stream in symbol".to_string()),
+            }
+        }
+
+        let mut ret = vec![];
+        let mut c = *f(self.orig.peek())?;
+        while c.is_alphanumeric() {
+            self.orig.next();
+            ret.push(c);
+            c = *f(self.orig.peek())?; 
+        }
+        Ok(ret.into_iter().collect())
+    }
+}
 
 pub fn parse( packet : &str ) -> Result<Packet, String> {
     let mut parser = Parser{ orig : packet.chars().peekable(), done : false };
 
     parser.is( '[' )?;
     parser.next();
+    let packet_type = parser.symbol()?;
      
-     Err("Unknown Failure".to_string())
+    Err("Unknown Failure".to_string())
 }
