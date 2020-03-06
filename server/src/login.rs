@@ -2,6 +2,7 @@
 use std::net::{TcpListener, TcpStream};
 use std::time::Duration;
 use std::io::{Read, Error, ErrorKind};
+use std::thread;
 
 const END_TX : u8 = 10;
 
@@ -36,25 +37,24 @@ fn read_packet<R : Read>( mut stream : R ) -> std::io::Result<Vec<u8>> {
     Ok(packet)
 }
 
-fn handle_stream( mut stream : TcpStream ) -> std::io::Result<()> {
-    // TODO this needs to happen in a thread
-    // TODO need a timeout so we can kill the thread if it turns out nothing is coming
+fn handle_stream( stream : TcpStream ) {
+
+    thread::spawn( move || -> std::io::Result<()> {
+
+        // TODO what timeout value to use?
+        stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+        let packet = read_packet(stream);
+        match packet {
+            Ok(x) => println!( "ok " ),
+            Err(e) => println!( "err : {}", e ),
+        }
     
-    // TODO what timeout value to use?
-    stream.set_read_timeout(Some(Duration::from_secs(2)))?;
-    let packet = read_packet(stream);
-    match packet {
-        Ok(x) => println!( "ok " ),
-        Err(e) => println!( "err : {}", e ),
-    }
-    
-    
+        Ok(()) 
+    } );
+
 
     //let x = String::from_utf8( buffer[..count].to_vec() ); 
     // TODO if we end up parsing the string here, then do we need a String or can we just use a &str?
-    
-
-    Ok(())
 }
 
 pub fn listen_for_logins() -> std::io::Result<()> {
@@ -62,9 +62,10 @@ pub fn listen_for_logins() -> std::io::Result<()> {
     // TODO pass in the ip address and port
     let listener = TcpListener::bind("127.0.0.1:3000")?;
 
+
     for stream in listener.incoming() {
         match stream {
-            Ok(stream) => handle_stream(stream)?,
+            Ok(stream) => handle_stream(stream),
             Err(e) => {
                 println!("encountered error on incoming connection: {}", e); 
                 ()
