@@ -2,8 +2,12 @@
 use std::str::Chars;
 use std::iter::Peekable;
 
-pub enum Packet {
-
+pub enum Command {
+    Register { 
+        id : String,
+        ip : String,
+        port : String,
+    },
 }
 
 
@@ -49,12 +53,55 @@ impl<'a> Parser<'a> {
     }
 }
 
-pub fn parse( packet : &str ) -> Result<Packet, String> {
+fn check_string( i1 : &str, i2 : &str ) -> Result<(), String> {
+    if i1 == i2 {
+        Ok(())
+    }
+    else {
+        Err(format!("Expected {} but found {}", i1, i2))
+    }
+}
+
+// [register|id:<symbol>|ip:<symbol>|port:<symbol>]
+fn parse_register_request( parser : &mut Parser ) -> Result<Command, String> {
+    parser.is( '|' )?;
+    parser.next();
+    let id_param_name = parser.symbol()?;
+    check_string( &id_param_name[..], "id" )?;
+    parser.is( ':' )?;
+    parser.next();
+    let id_param_value = parser.symbol()?;
+    parser.is( '|' )?;
+    parser.next();
+    let ip_param_name = parser.symbol()?;
+    check_string( &id_param_name[..], "ip" )?;
+    parser.is( ':' )?;
+    parser.next();
+    let ip_param_value = parser.symbol()?;
+    parser.is( '|' )?;
+    parser.next();
+    let port_param_name = parser.symbol()?;
+    check_string( &port_param_name[..], "port" )?;
+    parser.is( ':' )?;
+    parser.next();
+    let port_param_value = parser.symbol()?;
+    parser.is( ']' )?;
+    parser.next();
+
+    Ok(Command::Register { id : id_param_value
+                         , ip : ip_param_value
+                         , port : port_param_value
+                         })
+}
+
+pub fn parse( packet : &str ) -> Result<Command, String> {
     let mut parser = Parser{ orig : packet.chars().peekable(), done : false };
 
     parser.is( '[' )?;
     parser.next();
     let packet_type = parser.symbol()?;
-     
-    Err("Unknown Failure".to_string())
+    match &packet_type[..] { // TODO need to keep parsing to make sure there isn't more commands in the packet
+        "register" => parse_register_request( &mut parser ),
+        _ => Err("".to_string())
+    }
 }
