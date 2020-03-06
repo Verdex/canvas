@@ -1,5 +1,6 @@
 
 mod login;
+mod packet_parser;
 
 fn main() -> std::io::Result<()> {
 
