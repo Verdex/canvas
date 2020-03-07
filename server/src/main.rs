@@ -23,16 +23,11 @@ fn main() -> std::io::Result<()> {
     mpsc::Sender::clone(&tx)
 */
 
-
-    let zz = "\n";
-    let bz = zz.as_bytes();
-    println!("!!!!!!!!!!!!!!!");
-    println!("blarg {}", bz[0]);
-
-    // TODO this needs to happen in a thread
+    
     // TODO need to set the connect timeout
 
-    login::listen_for_logins();
+    let _ = login::listen_for_logins();
+    let _ = packet_parser::parse("[blah]");
 
     Ok(())
 }

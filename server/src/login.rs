@@ -1,13 +1,13 @@
 
 use std::net::{TcpListener, TcpStream, UdpSocket};
 use std::time::Duration;
-use std::io::{Read, Error, ErrorKind};
+use std::io::{Read, Write, Error, ErrorKind};
 use std::thread;
 use crate::packet_parser::{Command, self};
 
 const END_TX : u8 = 10;
 
-fn read_packet<R : Read>( mut stream : R ) -> std::io::Result<Vec<u8>> {
+fn read_packet<R : Read>( stream : &mut R ) -> std::io::Result<Vec<u8>> {
 
     let mut buffer = [0; 128];
     let mut tot : Vec<[u8; 128]> = vec![];
@@ -38,7 +38,7 @@ fn read_packet<R : Read>( mut stream : R ) -> std::io::Result<Vec<u8>> {
     Ok(packet)
 }
 
-fn handle_stream( stream : TcpStream ) {
+fn handle_stream( mut stream : TcpStream ) {
     fn f<T, E>( x : Result<T, E> ) -> std::io::Result<T> {
         match x {
             Ok(s) => Ok(s),
@@ -59,19 +59,23 @@ fn handle_stream( stream : TcpStream ) {
 
         // TODO what timeout value to use?
         stream.set_read_timeout(Some(Duration::from_secs(2)))?;
-        let packet = read_packet(stream)?;
+        stream.set_write_timeout(Some(Duration::from_secs(2)))?;
+        let packet = read_packet(&mut stream)?;
         let value = f(std::str::from_utf8(&packet[..(packet.len() - 1)]))?;
         let commands = f(packet_parser::parse(value))?;
 
         let (id, ip, port) = get_register(commands)?;
 
-        let mut udp = UdpSocket::bind(format!("{}:{}", ip, port))?;
-        
-        // connect
-        // send ready over tcp
+        let mut udp = UdpSocket::bind("127.0.0.1:4000")?;
+        udp.connect(format!("{}:{}", ip, port))?;
+
+        stream.write(Command::UdpTestReady.to_packet())?;
+         
         // wait for response over udp
-        // send success over tcp
-        // send open over udp
+
+        stream.write(Command::UdpTestSuccessful.to_packet())?;
+
+        // Send udp message 
         // wait for success over tcp
         // close tcp
         // send udp and id to game thread

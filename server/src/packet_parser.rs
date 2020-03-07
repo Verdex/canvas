@@ -8,8 +8,19 @@ pub enum Command {
         ip : String,
         port : String,
     },
+    UdpTestReady,
+    UdpTestSuccessful,
 }
 
+impl Command {
+    pub fn to_packet(&self) -> &[u8]{
+        match self {
+            Command::UdpTestReady => "[udp_test_ready]\n".as_bytes(),
+            Command::UdpTestSuccessful => "[udp_test_ready]\n".as_bytes(),
+            _ => panic!("Unknown command encountered"),
+        }
+    }
+}
 
 // [<packet_type>|atom:<param>|list:<length>:<param1>:<param2>]
 
