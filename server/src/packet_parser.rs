@@ -144,7 +144,7 @@ mod test {
         assert_eq!( commands.len(), 1, "There should only be one command" );
         let register:Command = commands.into_iter().nth(0).unwrap();
         match register {
-           Command::Register { id : id, ip : ip, port : port } => {
+           Command::Register { id, ip, port } => {
                assert_eq!( id, "some_id", "id should be set correctly" );
                assert_eq!( ip, "127.0.0.1", "ip should be set correctly" );
                assert_eq!( port, "4000", "port should be set correctly" );
