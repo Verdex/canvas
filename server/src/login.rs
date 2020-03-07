@@ -1,9 +1,9 @@
 
-use std::net::{TcpListener, TcpStream};
+use std::net::{TcpListener, TcpStream, UdpSocket};
 use std::time::Duration;
 use std::io::{Read, Error, ErrorKind};
 use std::thread;
-use crate::packet_parser;
+use crate::packet_parser::{Command, self};
 
 const END_TX : u8 = 10;
 
@@ -45,20 +45,39 @@ fn handle_stream( stream : TcpStream ) {
             Err(_) => Err(Error::new(ErrorKind::Other, "Error")),
         }
     }
-    
+    fn get_register( mut cs : Vec<Command> ) -> std::io::Result<(String, String, String)> {
+        if cs.len() != 1 {
+            return Err(Error::new(ErrorKind::Other, "Error"));
+        }
+        match cs.pop().unwrap() {
+            Command::Register {id, ip, port} => Ok((id, ip, port)),
+            _ => Err(Error::new(ErrorKind::Other, "Error")),
+        }
+    }
+
     thread::spawn( move || -> std::io::Result<()> {
 
         // TODO what timeout value to use?
         stream.set_read_timeout(Some(Duration::from_secs(2)))?;
         let packet = read_packet(stream)?;
-        let value = f(std::str::from_utf8(&packet[..]))?;
+        let value = f(std::str::from_utf8(&packet[..(packet.len() - 1)]))?;
         let commands = f(packet_parser::parse(value))?;
+
+        let (id, ip, port) = get_register(commands)?;
+
+        let mut udp = UdpSocket::bind(format!("{}:{}", ip, port))?;
+        
+        // connect
+        // send ready over tcp
+        // wait for response over udp
+        // send success over tcp
+        // send open over udp
+        // wait for success over tcp
+        // close tcp
+        // send udp and id to game thread
     
         Ok(()) 
     } );
-
-
-    // TODO if we end up parsing the string here, then do we need a String or can we just use a &str?
 }
 
 pub fn listen_for_logins() -> std::io::Result<()> {
