@@ -116,16 +116,21 @@ fn parse_register_request( parser : &mut Parser ) -> Result<Command, String> {
                          })
 }
 
-pub fn parse( packet : &str ) -> Result<Command, String> {
-    let mut parser = Parser{ orig : packet.chars().peekable(), done : false };
+pub fn parse( packet : &str ) -> Result<Vec<Command>, String> {
+    let mut parser = Parser{ orig : packet.chars().peekable() };
 
-    parser.is( '[' )?;
-    parser.next();
-    let packet_type = parser.symbol()?;
-    match &packet_type[..] { // TODO need to keep parsing to make sure there isn't more commands in the packet
-        "register" => parse_register_request( &mut parser ),
-        _ => Err("".to_string())
+    let mut ret = vec![];
+    while !parser.done() {
+        parser.is( '[' )?;
+        parser.next();
+        let packet_type = parser.symbol()?;
+        match &packet_type[..] { // TODO need to keep parsing to make sure there isn't more commands in the packet
+            "register" => ret.push(parse_register_request( &mut parser )?),
+            unknown => {return Err(format!("Encountered unknown comman name {}", unknown));},
+        }
     }
+
+    Ok(ret)
 }
 
 #[cfg(test)]
@@ -135,7 +140,9 @@ mod test {
 
     #[test]
     fn should_parse_register() -> Result<(), String> {
-        let register = parse( "[register|id:some_id|ip:127.0.0.1|port:4000]" )?;
+        let commands = parse( "[register|id:some_id|ip:127.0.0.1|port:4000]" )?;
+        assert_eq!( commands.len(), 1, "There should only be one command" );
+        let register:Command = commands.into_iter().nth(0).unwrap();
         match register {
            Command::Register { id : id, ip : ip, port : port } => {
                assert_eq!( id, "some_id", "id should be set correctly" );
