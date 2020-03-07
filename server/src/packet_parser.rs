@@ -124,7 +124,7 @@ pub fn parse( packet : &str ) -> Result<Vec<Command>, String> {
         parser.is( '[' )?;
         parser.next();
         let packet_type = parser.symbol()?;
-        match &packet_type[..] { // TODO need to keep parsing to make sure there isn't more commands in the packet
+        match &packet_type[..] { 
             "register" => ret.push(parse_register_request( &mut parser )?),
             unknown => {return Err(format!("Encountered unknown comman name {}", unknown));},
         }
