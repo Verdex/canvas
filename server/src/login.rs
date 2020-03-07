@@ -3,6 +3,7 @@ use std::net::{TcpListener, TcpStream};
 use std::time::Duration;
 use std::io::{Read, Error, ErrorKind};
 use std::thread;
+use crate::packet_parser;
 
 const END_TX : u8 = 10;
 
@@ -38,22 +39,25 @@ fn read_packet<R : Read>( mut stream : R ) -> std::io::Result<Vec<u8>> {
 }
 
 fn handle_stream( stream : TcpStream ) {
-
+    fn f<T, E>( x : Result<T, E> ) -> std::io::Result<T> {
+        match x {
+            Ok(s) => Ok(s),
+            Err(_) => Err(Error::new(ErrorKind::Other, "Error")),
+        }
+    }
+    
     thread::spawn( move || -> std::io::Result<()> {
 
         // TODO what timeout value to use?
         stream.set_read_timeout(Some(Duration::from_secs(2)))?;
-        let packet = read_packet(stream);
-        match packet {
-            Ok(x) => println!( "ok " ),
-            Err(e) => println!( "err : {}", e ),
-        }
+        let packet = read_packet(stream)?;
+        let value = f(std::str::from_utf8(&packet[..]))?;
+        let commands = f(packet_parser::parse(value))?;
     
         Ok(()) 
     } );
 
 
-    //let x = String::from_utf8( buffer[..count].to_vec() ); 
     // TODO if we end up parsing the string here, then do we need a String or can we just use a &str?
 }
 
