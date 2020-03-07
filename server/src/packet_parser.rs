@@ -15,7 +15,6 @@ pub enum Command {
 
 struct Parser<'a> {
     orig : Peekable<Chars<'a>>,
-    done : bool
 }
 
 impl<'a> Parser<'a> {
@@ -28,10 +27,7 @@ impl<'a> Parser<'a> {
     }
 
     fn next(&mut self) {
-        match self.orig.next() {
-            None => self.done = true,
-            _ => (),
-        }
+        self.orig.next();
     }
 
     fn symbol(&mut self) -> Result<String, String> {
@@ -68,6 +64,14 @@ impl<'a> Parser<'a> {
             c = *f(self.orig.peek())?; 
         }
         Ok(ret.into_iter().collect())
+    }
+
+    fn done(&mut self) -> bool {
+        let next = self.orig.peek();
+        match next {
+            None => true,
+            _ => false,
+        }
     }
 }
 
