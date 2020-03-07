@@ -44,7 +44,25 @@ impl<'a> Parser<'a> {
 
         let mut ret = vec![];
         let mut c = *f(self.orig.peek())?;
-        while c.is_alphanumeric() {
+        while c.is_alphanumeric() || c == '_' {
+            self.orig.next();
+            ret.push(c);
+            c = *f(self.orig.peek())?; 
+        }
+        Ok(ret.into_iter().collect())
+    }
+
+    fn any(&mut self) -> Result<String, String> {
+        fn f<T>( v : Option<T> ) -> Result<T, String> {
+            match v {
+                Some(v) => Ok(v),
+                None => Err("Encountered end of stream in any".to_string()),
+            }
+        }
+
+        let mut ret = vec![];
+        let mut c = *f(self.orig.peek())?;
+        while c != '|' && c != ']' {
             self.orig.next();
             ret.push(c);
             c = *f(self.orig.peek())?; 
@@ -74,17 +92,17 @@ fn parse_register_request( parser : &mut Parser ) -> Result<Command, String> {
     parser.is( '|' )?;
     parser.next();
     let ip_param_name = parser.symbol()?;
-    check_string( &id_param_name[..], "ip" )?;
+    check_string( &ip_param_name[..], "ip" )?;
     parser.is( ':' )?;
     parser.next();
-    let ip_param_value = parser.symbol()?;
+    let ip_param_value = parser.any()?;
     parser.is( '|' )?;
     parser.next();
     let port_param_name = parser.symbol()?;
     check_string( &port_param_name[..], "port" )?;
     parser.is( ':' )?;
     parser.next();
-    let port_param_value = parser.symbol()?;
+    let port_param_value = parser.any()?;
     parser.is( ']' )?;
     parser.next();
 
@@ -103,5 +121,25 @@ pub fn parse( packet : &str ) -> Result<Command, String> {
     match &packet_type[..] { // TODO need to keep parsing to make sure there isn't more commands in the packet
         "register" => parse_register_request( &mut parser ),
         _ => Err("".to_string())
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn should_parse_register() -> Result<(), String> {
+        let register = parse( "[register|id:some_id|ip:127.0.0.1|port:4000]" )?;
+        match register {
+           Command::Register { id : id, ip : ip, port : port } => {
+               assert_eq!( id, "some_id", "id should be set correctly" );
+               assert_eq!( ip, "127.0.0.1", "ip should be set correctly" );
+               assert_eq!( port, "4000", "port should be set correctly" );
+               Ok(())
+           },
+           _ => Err("Encountered non-register command".to_string()),
+        }
     }
 }
