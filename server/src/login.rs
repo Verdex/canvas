@@ -6,14 +6,32 @@ use std::thread;
 use crate::packet_parser::{Command, self};
 use crate::packet_reader;
 
+fn f<T, E>( x : Result<T, E> ) -> std::io::Result<T> {
+    match x {
+        Ok(s) => Ok(s),
+        Err(_) => Err(Error::new(ErrorKind::Other, "Error")),
+    }
+}
+
+fn read_tcp_command( stream : &mut TcpStream ) -> std::io::Result<Vec<Command>> {
+
+    let packet = packet_reader::read_tcp_packet(stream)?;
+    let string = f(std::str::from_utf8(&packet[..(packet.len() - 1)]))?;
+    let commands = f(packet_parser::parse(string))?;
+
+    Ok(commands) 
+}
+
+fn read_udp_command( socket : &mut UdpSocket ) -> std::io::Result<Vec<Command>> {
+
+    let packet = packet_reader::read_udp_packet(socket)?;
+    let string = f(std::str::from_utf8(&packet[..(packet.len() - 1)]))?;
+    let commands = f(packet_parser::parse(string))?;
+
+    Ok(commands) 
+}
 
 fn handle_stream( mut stream : TcpStream ) {
-    fn f<T, E>( x : Result<T, E> ) -> std::io::Result<T> {
-        match x {
-            Ok(s) => Ok(s),
-            Err(_) => Err(Error::new(ErrorKind::Other, "Error")),
-        }
-    }
     fn get_register( mut cs : Vec<Command> ) -> std::io::Result<(String, String, String)> {
         if cs.len() != 1 {
             return Err(Error::new(ErrorKind::Other, "Error"));
@@ -29,18 +47,18 @@ fn handle_stream( mut stream : TcpStream ) {
         // TODO what timeout value to use?
         stream.set_read_timeout(Some(Duration::from_secs(2)))?;
         stream.set_write_timeout(Some(Duration::from_secs(2)))?;
-        let packet = packet_reader::read_tcp_packet(&mut stream)?;
-        let value = f(std::str::from_utf8(&packet[..(packet.len() - 1)]))?;
-        let commands = f(packet_parser::parse(value))?;
+        let register_command = read_tcp_command( &mut stream )?;
 
-        let (id, ip, port) = get_register(commands)?;
+        let (id, ip, port) = get_register(register_command)?;
 
         let mut udp = UdpSocket::bind("127.0.0.1:4000")?;
         udp.connect(format!("{}:{}", ip, port))?;
+        udp.set_read_timeout(Some(Duration::from_secs(2)))?;
+        udp.set_write_timeout(Some(Duration::from_secs(2)))?;
 
         stream.write(Command::UdpTestReady.to_packet())?;
-         
-        // wait for response over udp
+        
+        let udp_test_command = read_udp_command( &mut udp )?;
 
         stream.write(Command::UdpTestSuccessful.to_packet())?;
 

@@ -118,8 +118,6 @@ fn parse_register_request( parser : &mut Parser ) -> Result<Command, String> {
     parser.is( ':' )?;
     parser.next();
     let port_param_value = parser.any()?;
-    parser.is( ']' )?;
-    parser.next();
 
     Ok(Command::Register { id : id_param_value
                          , ip : ip_param_value
@@ -137,8 +135,11 @@ pub fn parse( packet : &str ) -> Result<Vec<Command>, String> {
         let packet_type = parser.symbol()?;
         match &packet_type[..] { 
             "register" => ret.push(parse_register_request( &mut parser )?),
+            "udp_test_ready" => ret.push( Command::UdpTestReady ),
             unknown => {return Err(format!("Encountered unknown comman name {}", unknown));},
         }
+        parser.is( ']' )?;
+        parser.next();
     }
 
     Ok(ret)
@@ -161,6 +162,17 @@ mod test {
                assert_eq!( port, "4000", "port should be set correctly" );
                Ok(())
            },
+           _ => Err("Encountered non-register command".to_string()),
+        }
+    }
+
+    #[test]
+    fn should_parse_udp_test_ready() -> Result<(), String> {
+        let commands = parse( "[udp_test_ready]" )?;
+        assert_eq!( commands.len(), 1, "There should only be one command" );
+        let register:Command = commands.into_iter().nth(0).unwrap();
+        match register {
+           Command::UdpTestReady => Ok(()),
            _ => Err("Encountered non-register command".to_string()),
         }
     }
