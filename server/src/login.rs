@@ -1,42 +1,11 @@
 
 use std::net::{TcpListener, TcpStream, UdpSocket};
 use std::time::Duration;
-use std::io::{Read, Write, Error, ErrorKind};
+use std::io::{Write, Error, ErrorKind};
 use std::thread;
 use crate::packet_parser::{Command, self};
+use crate::packet_reader;
 
-const END_TX : u8 = 10;
-
-fn read_packet<R : Read>( stream : &mut R ) -> std::io::Result<Vec<u8>> {
-
-    let mut buffer = [0; 128];
-    let mut tot : Vec<[u8; 128]> = vec![];
-
-    loop {
-        let count = stream.read(&mut buffer[..])?;
-
-        if count == 0 {
-            return Err(Error::new(ErrorKind::Other, "Read zero bytes"));
-        }
-         
-        tot.push( buffer );
-        
-        if buffer[count - 1] == END_TX {
-            break
-        }
-
-        buffer = [0; 128];
-    }
-
-    let packet : Vec<u8> = tot.into_iter()
-                              .map( | b | b.iter()
-                                           .fold( vec![], | mut p, sp | { p.push( *sp ); p } ) )
-                              .flatten()
-                              .collect();
-
-
-    Ok(packet)
-}
 
 fn handle_stream( mut stream : TcpStream ) {
     fn f<T, E>( x : Result<T, E> ) -> std::io::Result<T> {
@@ -60,7 +29,7 @@ fn handle_stream( mut stream : TcpStream ) {
         // TODO what timeout value to use?
         stream.set_read_timeout(Some(Duration::from_secs(2)))?;
         stream.set_write_timeout(Some(Duration::from_secs(2)))?;
-        let packet = read_packet(&mut stream)?;
+        let packet = packet_reader::read_tcp_packet(&mut stream)?;
         let value = f(std::str::from_utf8(&packet[..(packet.len() - 1)]))?;
         let commands = f(packet_parser::parse(value))?;
 
